@@ -7,21 +7,23 @@ import DialogContentText from "@mui/material/DialogContentText";
 import TextField from "@mui/material/TextField";
 import cuid from "cuid";
 import dayjs from "dayjs";
-import { ref, set } from "firebase/database";
+import { ref, set, update } from "firebase/database";
 import * as React from "react";
 import { headCells } from "../MenuTable/headCells";
 
-export default function AddItemModal({ viewBin }: { viewBin: boolean }) {
-  const [open, setOpen] = React.useState(false);
+export default function EditItemModal({
+  item: menuItem,
+  toggleModal,
+  setTooggleModal,
+}: {
+  item: Data;
+  toggleModal: boolean;
+  setTooggleModal: React.Dispatch<React.SetStateAction<boolean>>;
+}) {
   const [options, setOptions] = React.useState<string[]>([]);
-  const handleClickOpen = () => {
-    if (viewBin) return;
-    setOpen(true);
-  };
-
   const handleClose = () => {
     setOptions([]);
-    setOpen(false);
+    setTooggleModal(false);
   };
 
   const items = headCells.map((item) => ({ label: item.label, key: item.id }));
@@ -38,13 +40,14 @@ export default function AddItemModal({ viewBin }: { viewBin: boolean }) {
     optionsInput.focus();
   };
 
-  const setNewRecord = (data: Data) => {
+  const updateRecord = (data: Data) => {
     const datum = JSON.parse(JSON.stringify(data));
     delete datum.id;
 
     try {
-      set(ref(DB, "menu/" + data.id), {
+      update(ref(DB, "menu/" + data.id), {
         ...datum,
+        dateCreated: menuItem.dateCreated,
         deletedAt: 0,
       });
     } catch (error) {
@@ -56,17 +59,18 @@ export default function AddItemModal({ viewBin }: { viewBin: boolean }) {
   const handleDeleteOption = (val: string) =>
     setOptions(options.filter((item) => item !== val));
 
+  React.useEffect(() => {
+    try {
+      setOptions(JSON.parse(menuItem.options));
+    } catch (error) {
+      //
+    }
+  }, [toggleModal]);
+
   return (
     <React.Fragment>
-      <Button
-        variant="outlined"
-        sx={{ mr: 2, cursor: viewBin ? "not-allowed" : "pointer" }}
-        onClick={handleClickOpen}
-      >
-        Add Item
-      </Button>
       <Dialog
-        open={open}
+        open={toggleModal}
         onClose={handleClose}
         PaperProps={{
           component: "form",
@@ -84,14 +88,14 @@ export default function AddItemModal({ viewBin }: { viewBin: boolean }) {
             formJson.id = cuid();
             formJson.dateCreated = dayjs().toISOString();
 
-            setNewRecord(formJson as Data);
+            updateRecord(formJson as Data);
             // handleClose();
           },
         }}
       >
         <DialogContent>
           <DialogContentText sx={{ marginBottom: 3 }}>
-            Fill up the fields to add an item to the menu.
+            Modify item details.
           </DialogContentText>
           {items.map((item, index) => {
             if (["id", "dateCreated", "deletedAt"].includes(item.key)) return;
@@ -151,6 +155,7 @@ export default function AddItemModal({ viewBin }: { viewBin: boolean }) {
                 autoFocus
                 required
                 fullWidth
+                defaultValue={menuItem[item.key]}
                 autoComplete="off"
                 margin="normal"
                 id={item.key}
@@ -173,7 +178,7 @@ export default function AddItemModal({ viewBin }: { viewBin: boolean }) {
         </DialogContent>
         <DialogActions>
           <Button onClick={handleClose}>Cancel</Button>
-          <Button type="submit">ADD</Button>
+          <Button type="submit">EDIT</Button>
         </DialogActions>
       </Dialog>
     </React.Fragment>

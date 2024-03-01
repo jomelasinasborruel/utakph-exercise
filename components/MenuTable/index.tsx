@@ -1,8 +1,10 @@
 "use client";
 
-import * as React from "react";
-import { alpha } from "@mui/material/styles";
+import { DB } from "@/app/firebase";
+import { Button } from "@mui/material";
 import Box from "@mui/material/Box";
+import Checkbox from "@mui/material/Checkbox";
+import Paper from "@mui/material/Paper";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableCell, { tableCellClasses } from "@mui/material/TableCell";
@@ -12,20 +14,15 @@ import TablePagination from "@mui/material/TablePagination";
 import TableRow from "@mui/material/TableRow";
 import TableSortLabel from "@mui/material/TableSortLabel";
 import Toolbar from "@mui/material/Toolbar";
-import Typography from "@mui/material/Typography";
-import Paper from "@mui/material/Paper";
-import Checkbox from "@mui/material/Checkbox";
 import Tooltip from "@mui/material/Tooltip";
-// import DeleteIcon from "@mui/icons-material/Delete";
-// import FilterListIcon from "@mui/icons-material/FilterList";
+import Typography from "@mui/material/Typography";
 import { visuallyHidden } from "@mui/utils";
-import FormDialog from "../Modal/AddItem";
-import { Button } from "@mui/material";
-import { onValue, ref, remove, update } from "firebase/database";
-
 import dayjs from "dayjs";
+import { onValue, ref, update } from "firebase/database";
+import * as React from "react";
+import AddItemModal from "../Modal/AddItem";
 import { headCells } from "./headCells";
-import { DB } from "@/app/firebase";
+import EditItemModal from "../Modal/EditItem";
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   if (b[orderBy] < a[orderBy]) {
@@ -169,15 +166,9 @@ interface EnhancedTableToolbarProps {
   menuData: Data[];
   viewBin: boolean;
   setViewDeleted: React.Dispatch<React.SetStateAction<boolean>>;
-  setUpdating: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
-const handleDeleteItem = (
-  menuData: Data[],
-  setUpdating: React.Dispatch<React.SetStateAction<boolean>>
-) => {
-  setUpdating(true);
-
+const handleDeleteItem = (menuData: Data[]) => {
   menuData.map((datum) => {
     update(ref(DB, "menu/" + datum.id), {
       ...datum,
@@ -191,7 +182,7 @@ const handleDeleteItem = (
 };
 
 function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
-  const { selected, menuData, viewBin, setUpdating, setViewDeleted } = props;
+  const { selected, menuData, viewBin, setViewDeleted } = props;
 
   return (
     <Toolbar
@@ -206,8 +197,7 @@ function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
           <Button
             onClick={() =>
               handleDeleteItem(
-                menuData.filter((item) => selected.includes(item.id)),
-                setUpdating
+                menuData.filter((item) => selected.includes(item.id))
               )
             }
             variant="outlined"
@@ -219,7 +209,7 @@ function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
       {selected.length === 0 && (
         <Tooltip title={viewBin ? "Hide deleted records first" : "Add an item"}>
           <React.Fragment>
-            <FormDialog viewBin={viewBin} setUpdating={setUpdating} />
+            <AddItemModal viewBin={viewBin} />
           </React.Fragment>
         </Tooltip>
       )}
@@ -251,14 +241,14 @@ const EnhancedTable = () => {
   const [orderBy, setOrderBy] = React.useState<keyof Data>("dateCreated");
   const [selected, setSelected] = React.useState<readonly string[]>([]);
   const [page, setPage] = React.useState(0);
-  const [updating, setUpdating] = React.useState(true);
+  const [toggleEditModal, setToggleEditModal] = React.useState(false);
+  const [selectedItemID, setSelectedItemID] = React.useState<Data | null>(null);
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [menuData, setMenuData] = React.useState<Data[]>([]);
   const [viewBin, setViewBin] = React.useState<boolean>(false);
 
-  const menuRef = ref(DB, "menu/");
   React.useEffect(() => {
-    if (updating === false) return;
+    const menuRef = ref(DB, "menu/");
     const unsubscribe = onValue(menuRef, (snapshot) => {
       const data = snapshot.val();
       if (!data) {
@@ -282,9 +272,9 @@ const EnhancedTable = () => {
 
       setMenuData(formattedData);
     });
-    setUpdating(false);
+
     return unsubscribe;
-  }, [updating]);
+  }, []);
 
   const handleRequestSort = (
     event: React.MouseEvent<unknown>,
@@ -388,124 +378,146 @@ const EnhancedTable = () => {
   };
 
   return (
-    <Box sx={{ width: "100%" }}>
-      <Paper
-        sx={{
-          width: "100%",
-          mb: 2,
-          background: "none",
-          boxShadow: "none",
-        }}
-      >
-        <EnhancedTableToolbar
-          menuData={menuData}
-          selected={selected}
-          viewBin={viewBin}
-          setViewDeleted={setViewBin}
-          setUpdating={setUpdating}
+    <React.Fragment>
+      {toggleEditModal && selectedItemID && (
+        <EditItemModal
+          toggleModal={toggleEditModal}
+          item={selectedItemID}
+          setTooggleModal={setToggleEditModal}
         />
-        <TableContainer>
-          <Table
-            sx={{
-              minWidth: 750,
-              [`& .${tableCellClasses.root}`]: {
-                borderBottomColor: "#ffffff",
-              },
-            }}
-            aria-labelledby="tableTitle"
-          >
-            <EnhancedTableHead
-              viewBin={viewBin}
-              numSelected={selected.length}
-              order={order}
-              orderBy={orderBy}
-              onSelectAllClick={handleSelectAllClick}
-              onRequestSort={handleRequestSort}
-              rowCount={menuData.length}
-            />
-            <TableBody>
-              {visibleRows.map((row, index) => {
-                const isItemSelected = isSelected(row.id);
-                const labelId = `enhanced-table-checkbox-${index}`;
+      )}
 
-                return (
-                  <TableRow
-                    hover
-                    // role="checkbox"
-                    aria-checked={isItemSelected}
-                    tabIndex={-1}
-                    key={row.id}
-                    selected={isItemSelected}
-                  >
-                    <TableCell padding="checkbox">
-                      <Checkbox
-                        onClick={(event) =>
-                          viewBin ? null : handleClick(event, row.id)
-                        }
-                        color="primary"
-                        checked={isItemSelected}
-                        inputProps={{
-                          "aria-labelledby": labelId,
-                        }}
-                        style={{
-                          color: "white",
-                          ...(viewBin
-                            ? {
-                                cursor: "not-allowed",
-                              }
-                            : { cursor: "pointer" }),
-                        }}
-                      />
-                    </TableCell>
+      <Box sx={{ width: "100%" }}>
+        <Paper
+          sx={{
+            width: "100%",
+            mb: 2,
+            background: "none",
+            boxShadow: "none",
+          }}
+        >
+          <EnhancedTableToolbar
+            menuData={menuData}
+            selected={selected}
+            viewBin={viewBin}
+            setViewDeleted={setViewBin}
+          />
+          <TableContainer>
+            <Table
+              sx={{
+                minWidth: 750,
+                [`& .${tableCellClasses.root}`]: {
+                  borderBottomColor: "#ffffff",
+                },
+              }}
+              aria-labelledby="tableTitle"
+            >
+              <EnhancedTableHead
+                viewBin={viewBin}
+                numSelected={selected.length}
+                order={order}
+                orderBy={orderBy}
+                onSelectAllClick={handleSelectAllClick}
+                onRequestSort={handleRequestSort}
+                rowCount={menuData.length}
+              />
+              <TableBody>
+                {visibleRows.map((row, index) => {
+                  const isItemSelected = isSelected(row.id);
+                  const labelId = `enhanced-table-checkbox-${index}`;
 
-                    {Object.keys(row).map((col, index) => {
-                      const key = col as keyof Data;
-                      if (key === "id" || key === "deletedAt") return;
-
-                      return (
-                        <TableCell
-                          key={index}
-                          sx={{
-                            color: "#ffffff",
-                            textAlign: ["name", "category", "options"].includes(
-                              key
-                            )
-                              ? "left"
-                              : "right",
+                  return (
+                    <TableRow
+                      hover
+                      onClick={() => {
+                        setToggleEditModal(true);
+                        setSelectedItemID(
+                          menuData.find((item) => item.id === row.id) ?? null
+                        );
+                      }}
+                      aria-checked={isItemSelected}
+                      tabIndex={-1}
+                      key={row.id}
+                      selected={isItemSelected}
+                      role="button"
+                    >
+                      <TableCell padding="checkbox">
+                        <Checkbox
+                          onClick={(event) => {
+                            event.stopPropagation();
+                            viewBin ? null : handleClick(event, row.id);
                           }}
-                          align="right"
-                        >
-                          {renderCell(key, row)}
-                        </TableCell>
-                      );
-                    })}
+                          color="primary"
+                          checked={isItemSelected}
+                          inputProps={{
+                            "aria-labelledby": labelId,
+                          }}
+                          style={{
+                            color: "white",
+                            ...(viewBin
+                              ? {
+                                  cursor: "not-allowed",
+                                }
+                              : { cursor: "pointer" }),
+                          }}
+                        />
+                      </TableCell>
+
+                      {Object.keys(row).map((col, index) => {
+                        const key = col as keyof Data;
+                        if (key === "id" || key === "deletedAt") return;
+
+                        return (
+                          <TableCell
+                            key={index}
+                            sx={{
+                              color: "#ffffff",
+                              textAlign: [
+                                "name",
+                                "category",
+                                "options",
+                              ].includes(key)
+                                ? "left"
+                                : "right",
+                            }}
+                            align="right"
+                          >
+                            {renderCell(key, row)}
+                          </TableCell>
+                        );
+                      })}
+                    </TableRow>
+                  );
+                })}
+                {emptyRows > 0 && (
+                  <TableRow
+                    style={{
+                      height: 53 * emptyRows,
+                    }}
+                  >
+                    <TableCell colSpan={6} />
                   </TableRow>
-                );
-              })}
-              {emptyRows > 0 && (
-                <TableRow
-                  style={{
-                    height: 53 * emptyRows,
-                  }}
-                >
-                  <TableCell colSpan={6} />
-                </TableRow>
-              )}
-            </TableBody>
-          </Table>
-        </TableContainer>
-        <TablePagination
-          rowsPerPageOptions={[5, 10, 25]}
-          component="div"
-          count={menuData.length}
-          rowsPerPage={rowsPerPage}
-          page={page}
-          onPageChange={handleChangePage}
-          onRowsPerPageChange={handleChangeRowsPerPage}
-          sx={{ color: "white", "& .MuiSvgIcon-root": { fill: "#ffffff" } }}
-        />
-      </Paper>
-    </Box>
+                )}
+              </TableBody>
+            </Table>
+          </TableContainer>
+          <TablePagination
+            rowsPerPageOptions={[5, 10, 25]}
+            component="div"
+            count={
+              menuData.filter((item) =>
+                viewBin ? item.deletedAt !== 0 : item.deletedAt === 0
+              ).length
+            }
+            rowsPerPage={rowsPerPage}
+            page={page}
+            onPageChange={handleChangePage}
+            onRowsPerPageChange={handleChangeRowsPerPage}
+            sx={{ color: "white", "& .MuiSvgIcon-root": { fill: "#ffffff" } }}
+          />
+        </Paper>
+      </Box>
+    </React.Fragment>
   );
 };
 
