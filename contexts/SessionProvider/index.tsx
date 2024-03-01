@@ -36,9 +36,9 @@ export default function SessionProvider({ children }: { children: ReactNode }) {
     });
   };
 
-  const createAccount = (email: string, password: string) => {
-    createUserWithEmailAndPassword(AUTH, email, password)
-      .then((userCredential) => {
+  const createAccount = (email: string, password: string) =>
+    createUserWithEmailAndPassword(AUTH, email, password).then(
+      (userCredential) => {
         const user = userCredential.user;
         const newMenuID = cuid();
         const shortName = uniqueNamesGenerator({
@@ -69,13 +69,8 @@ export default function SessionProvider({ children }: { children: ReactNode }) {
             dateCreated: dayjs().toISOString(),
           }).catch((err) => console.log(err));
         }
-      })
-      .catch((error) => {
-        const errorCode = error.code;
-        const errorMessage = error.message;
-        console.log({ errorCode, errorMessage });
-      });
-  };
+      }
+    );
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(AUTH, (auth) => {

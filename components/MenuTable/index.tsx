@@ -2,7 +2,7 @@
 
 import { DB } from "@/app/firebase";
 import useAuthContext from "@/lib/useAuthContext";
-import { Button } from "@mui/material";
+import { Button, Snackbar } from "@mui/material";
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
 import Paper from "@mui/material/Paper";
@@ -24,6 +24,7 @@ import * as React from "react";
 import AddItemModal from "../Modal/AddItem";
 import EditItemModal from "../Modal/EditItem";
 import { headCells } from "./headCells";
+import { BiCheckCircle } from "react-icons/bi";
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   if (b[orderBy] < a[orderBy]) {
@@ -162,13 +163,16 @@ function EnhancedTableHead(props: EnhancedTableProps) {
   );
 }
 
-const handleDeleteItem = (menuData: Data[]) => {
+const handleDeleteItem = (
+  menuData: Data[],
+  setIsSnackbarToggled: React.Dispatch<React.SetStateAction<boolean>>
+) => {
   menuData.map((datum) => {
-    update(ref(DB, "menu/" + datum.id), {
+    update(ref(DB, "items/" + datum.id), {
       ...datum,
       deletedAt: dayjs().toISOString(),
     })
-      .then(() => console.log("success"))
+      .then(() => setIsSnackbarToggled(true))
       .catch((error) => {
         console.log(error);
       });
@@ -179,12 +183,20 @@ interface EnhancedTableToolbarProps {
   selected: readonly string[];
   menuData: Data[];
   viewBin: boolean;
-  setViewDeleted: React.Dispatch<React.SetStateAction<boolean>>;
   currentMenuID: string | null;
+  setViewDeleted: React.Dispatch<React.SetStateAction<boolean>>;
+  setIsSnackbarToggled: React.Dispatch<React.SetStateAction<boolean>>;
 }
 
 function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
-  const { selected, menuData, viewBin, currentMenuID, setViewDeleted } = props;
+  const {
+    selected,
+    menuData,
+    viewBin,
+    currentMenuID,
+    setViewDeleted,
+    setIsSnackbarToggled,
+  } = props;
 
   return (
     <Toolbar
@@ -199,7 +211,8 @@ function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
           <Button
             onClick={() =>
               handleDeleteItem(
-                menuData.filter((item) => selected.includes(item.id))
+                menuData.filter((item) => selected.includes(item.id)),
+                setIsSnackbarToggled
               )
             }
             variant="outlined"
@@ -250,6 +263,7 @@ const EnhancedTable = () => {
   const [viewBin, setViewBin] = React.useState<boolean>(false);
   const { session } = useAuthContext();
   const [currentMenuID, setCurrentMenuID] = React.useState<string>();
+  const [isSnackbarToggled, setIsSnackbarToggled] = React.useState(false);
 
   const handleRequestSort = (
     event: React.MouseEvent<unknown>,
@@ -352,6 +366,17 @@ const EnhancedTable = () => {
     return cell;
   };
 
+  const handleCloseSnackBar = (
+    _event: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") {
+      return;
+    }
+
+    setIsSnackbarToggled(false);
+  };
+
   React.useEffect(() => {
     // get(child(ref(DB), `users/${session?.uid ?? ""}`))
     //   .then((snapshot) => {
@@ -382,7 +407,6 @@ const EnhancedTable = () => {
     const menuRef = ref(DB, "items/");
     const unsubscribe = onValue(menuRef, (snapshot) => {
       const data = snapshot.val();
-      console.log(data);
       if (!data) {
         setMenuData([]);
         return;
@@ -412,6 +436,19 @@ const EnhancedTable = () => {
   }, [currentMenuID]);
   return (
     <React.Fragment>
+      <Snackbar
+        ContentProps={{ sx: { bgcolor: "#198754" } }}
+        color="error"
+        open={isSnackbarToggled}
+        autoHideDuration={3000}
+        message={
+          <span>
+            <BiCheckCircle className="inline text-[1.5rem] mr-2" /> Deleted
+            succesfully
+          </span>
+        }
+        onClose={handleCloseSnackBar}
+      />
       {toggleEditModal && selectedItemID && (
         <EditItemModal
           toggleModal={toggleEditModal}
@@ -430,6 +467,7 @@ const EnhancedTable = () => {
           }}
         >
           <EnhancedTableToolbar
+            setIsSnackbarToggled={setIsSnackbarToggled}
             currentMenuID={currentMenuID ?? null}
             menuData={menuData}
             selected={selected}
@@ -465,6 +503,9 @@ const EnhancedTable = () => {
                       hover
                       onClick={() => {
                         setToggleEditModal(true);
+                        console.log(
+                          menuData.find((item) => item.id === row.id)
+                        );
                         setSelectedItemID(
                           menuData.find((item) => item.id === row.id) ?? null
                         );
