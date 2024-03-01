@@ -47,22 +47,7 @@ export default function SignUpForm() {
           <span className="text-red-700">{errors.email.message}</span>
         )}
       </FormControl>
-      <FormControl>
-        <TextField
-          inputProps={{
-            ...register("confirmPassword", {
-              required: { value: true, message: "Field required" },
-            }),
-          }}
-          sx={{ bgcolor: "white" }}
-          type="password"
-          variant="outlined"
-          label="Password"
-        />
-        {errors.confirmPassword && (
-          <span className="text-red-700">{errors.confirmPassword.message}</span>
-        )}
-      </FormControl>
+
       <FormControl>
         <TextField
           inputProps={{
@@ -73,7 +58,7 @@ export default function SignUpForm() {
           sx={{ bgcolor: "white" }}
           type="password"
           variant="outlined"
-          label="Confirm Password"
+          label="Password"
         />
         {errors.password && (
           <span className="text-red-700">{errors.password.message}</span>
