@@ -9,12 +9,16 @@ import {
 import { usePathname, useRouter } from "next/navigation";
 import React, { ReactNode, useEffect } from "react";
 
-import { AUTH } from "../app/firebase";
-import { AuthContext } from "./AuthContaxt";
+import cuid from "cuid";
+import dayjs from "dayjs";
+import { ref, set } from "firebase/database";
+import { animals, colors, uniqueNamesGenerator } from "unique-names-generator";
+
+import { AuthContext } from "./AuthContext";
+import { AUTH, DB } from "@/app/firebase";
 
 export default function SessionProvider({ children }: { children: ReactNode }) {
   const [session, setSession] = React.useState<AuthContextProps["session"]>();
-
   const router = useRouter();
   const pathname = usePathname();
 
@@ -35,22 +39,55 @@ export default function SessionProvider({ children }: { children: ReactNode }) {
   const createAccount = (email: string, password: string) => {
     createUserWithEmailAndPassword(AUTH, email, password)
       .then((userCredential) => {
-        // Signed up
         const user = userCredential.user;
-        console.log(user);
-        // ...
+        const newMenuID = cuid();
+        const shortName = uniqueNamesGenerator({
+          dictionaries: [colors, animals],
+          length: 2,
+          separator: "-",
+        });
+        if (user) {
+          set(ref(DB, "/users/" + user.uid), {
+            email: user.email,
+            displayName: shortName,
+            createdMenus: { [newMenuID]: true },
+            joinedMenus: { [newMenuID]: true },
+            dateCreated: dayjs().toISOString(),
+          }).catch((err) => console.log(err));
+
+          set(ref(DB, "/menus/" + newMenuID), {
+            owner: { id: user.uid, email: user.email, displayName: shortName },
+            members: {
+              [newMenuID]: {
+                create: true,
+                read: true,
+                update: true,
+                delete: true,
+              },
+            },
+            name: "Manu",
+            dateCreated: dayjs().toISOString(),
+          }).catch((err) => console.log(err));
+        }
       })
       .catch((error) => {
         const errorCode = error.code;
         const errorMessage = error.message;
         console.log({ errorCode, errorMessage });
-        // ..
       });
   };
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(AUTH, (auth) => {
-      auth ? setSession({ email: auth.email }) : setSession(null);
+      if (auth) {
+        setSession({
+          email: auth.email,
+          uid: auth.uid,
+          displayName: auth.displayName,
+        });
+      } else {
+        setSession(null);
+      }
     });
 
     return unsubscribe;
@@ -78,7 +115,6 @@ export default function SessionProvider({ children }: { children: ReactNode }) {
       value={{ session, setSession, logout, login, createAccount }}
     >
       {children}
- 
     </AuthContext.Provider>
   );
 }

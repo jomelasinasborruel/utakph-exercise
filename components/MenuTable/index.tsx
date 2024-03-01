@@ -1,6 +1,7 @@
 "use client";
 
 import { DB } from "@/app/firebase";
+import useAuthContext from "@/lib/useAuthContext";
 import { Button } from "@mui/material";
 import Box from "@mui/material/Box";
 import Checkbox from "@mui/material/Checkbox";
@@ -18,11 +19,11 @@ import Tooltip from "@mui/material/Tooltip";
 import Typography from "@mui/material/Typography";
 import { visuallyHidden } from "@mui/utils";
 import dayjs from "dayjs";
-import { onValue, ref, update } from "firebase/database";
+import { child, get, onValue, ref, update } from "firebase/database";
 import * as React from "react";
 import AddItemModal from "../Modal/AddItem";
-import { headCells } from "./headCells";
 import EditItemModal from "../Modal/EditItem";
+import { headCells } from "./headCells";
 
 function descendingComparator<T>(a: T, b: T, orderBy: keyof T) {
   if (b[orderBy] < a[orderBy]) {
@@ -161,13 +162,6 @@ function EnhancedTableHead(props: EnhancedTableProps) {
   );
 }
 
-interface EnhancedTableToolbarProps {
-  selected: readonly string[];
-  menuData: Data[];
-  viewBin: boolean;
-  setViewDeleted: React.Dispatch<React.SetStateAction<boolean>>;
-}
-
 const handleDeleteItem = (menuData: Data[]) => {
   menuData.map((datum) => {
     update(ref(DB, "menu/" + datum.id), {
@@ -181,8 +175,16 @@ const handleDeleteItem = (menuData: Data[]) => {
   });
 };
 
+interface EnhancedTableToolbarProps {
+  selected: readonly string[];
+  menuData: Data[];
+  viewBin: boolean;
+  setViewDeleted: React.Dispatch<React.SetStateAction<boolean>>;
+  currentMenuID: string | null;
+}
+
 function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
-  const { selected, menuData, viewBin, setViewDeleted } = props;
+  const { selected, menuData, viewBin, currentMenuID, setViewDeleted } = props;
 
   return (
     <Toolbar
@@ -209,7 +211,7 @@ function EnhancedTableToolbar(props: EnhancedTableToolbarProps) {
       {selected.length === 0 && (
         <Tooltip title={viewBin ? "Hide deleted records first" : "Add an item"}>
           <React.Fragment>
-            <AddItemModal viewBin={viewBin} />
+            <AddItemModal viewBin={viewBin} currentMenuID={currentMenuID} />
           </React.Fragment>
         </Tooltip>
       )}
@@ -246,35 +248,8 @@ const EnhancedTable = () => {
   const [rowsPerPage, setRowsPerPage] = React.useState(5);
   const [menuData, setMenuData] = React.useState<Data[]>([]);
   const [viewBin, setViewBin] = React.useState<boolean>(false);
-
-  React.useEffect(() => {
-    const menuRef = ref(DB, "menu/");
-    const unsubscribe = onValue(menuRef, (snapshot) => {
-      const data = snapshot.val();
-      if (!data) {
-        setMenuData([]);
-        return;
-      }
-
-      const formattedData: Data[] = Object.keys(data).map((key) => {
-        return {
-          id: key,
-          name: data[key].name,
-          category: data[key].category,
-          options: data[key].options,
-          price: data[key].price,
-          cost: data[key].cost,
-          numberOfStocks: data[key].numberOfStocks,
-          dateCreated: data[key].dateCreated,
-          deletedAt: data[key].deletedAt,
-        };
-      });
-
-      setMenuData(formattedData);
-    });
-
-    return unsubscribe;
-  }, []);
+  const { session } = useAuthContext();
+  const [currentMenuID, setCurrentMenuID] = React.useState<string>();
 
   const handleRequestSort = (
     event: React.MouseEvent<unknown>,
@@ -377,6 +352,64 @@ const EnhancedTable = () => {
     return cell;
   };
 
+  React.useEffect(() => {
+    // get(child(ref(DB), `users/${session?.uid ?? ""}`))
+    //   .then((snapshot) => {
+    //     const userData = snapshot.val();
+    //     if (snapshot.exists()) {
+    //       let _currentMenuID = Object.keys(userData.createdMenus)[0];
+    //       setCurrentMenuID(_currentMenuID);
+    //     } else {
+    //       console.log("No data available");
+    //     }
+    //   })
+    //   .catch((error) => {
+    //     console.error(error);
+    //   });
+    // console.log(currentMenuID);
+    const usersRef = ref(DB, "users/" + session?.uid + "/createdMenus");
+    const unsubscribe = onValue(usersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (snapshot.exists()) {
+        setCurrentMenuID(Object.keys(data)[0]);
+      }
+    });
+
+    return unsubscribe;
+  }, [session]);
+
+  React.useEffect(() => {
+    const menuRef = ref(DB, "items/");
+    const unsubscribe = onValue(menuRef, (snapshot) => {
+      const data = snapshot.val();
+      console.log(data);
+      if (!data) {
+        setMenuData([]);
+        return;
+      }
+
+      const formattedData: Data[] = Object.keys(data)
+        .map((key) => {
+          return {
+            id: key,
+            name: data[key].name,
+            category: data[key].category,
+            options: data[key].options,
+            price: data[key].price,
+            cost: data[key].cost,
+            numberOfStocks: data[key].numberOfStocks,
+            dateCreated: data[key].dateCreated,
+            deletedAt: data[key].deletedAt,
+            menuID: data[key].menuID,
+          };
+        })
+        .filter((item) => item.menuID === currentMenuID);
+
+      setMenuData(formattedData);
+    });
+
+    return unsubscribe;
+  }, [currentMenuID]);
   return (
     <React.Fragment>
       {toggleEditModal && selectedItemID && (
@@ -397,6 +430,7 @@ const EnhancedTable = () => {
           }}
         >
           <EnhancedTableToolbar
+            currentMenuID={currentMenuID ?? null}
             menuData={menuData}
             selected={selected}
             viewBin={viewBin}
@@ -465,7 +499,7 @@ const EnhancedTable = () => {
 
                       {Object.keys(row).map((col, index) => {
                         const key = col as keyof Data;
-                        if (key === "id" || key === "deletedAt") return;
+                        if (["id", "deletedAt", "menuID"].includes(key)) return;
 
                         return (
                           <TableCell

@@ -4,7 +4,7 @@ import React, { useContext } from "react";
 import { useForm } from "react-hook-form";
 import { getAuth, createUserWithEmailAndPassword } from "firebase/auth";
 import { APP } from "../firebase";
-import { AuthContext } from "@/contexts/AuthContaxt";
+import { AuthContext } from "@/contexts/SessionProvider/AuthContext";
 
 interface FormValues {
   email: string;

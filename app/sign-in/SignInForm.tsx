@@ -1,10 +1,9 @@
 "use client";
-import { useRouter } from "next/navigation";
-import React, { useContext } from "react";
-import { useForm } from "react-hook-form";
-
-import { AuthContext } from "@/contexts/AuthContaxt";
+import { AuthContext } from "@/contexts/SessionProvider/AuthContext";
 import { Button, FormControl, TextField } from "@mui/material";
+import { useRouter } from "next/navigation";
+import { useContext } from "react";
+import { useForm } from "react-hook-form";
 
 interface FormValues {
   email: string;

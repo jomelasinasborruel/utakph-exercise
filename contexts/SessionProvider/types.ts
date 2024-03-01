@@ -3,6 +3,8 @@ interface AuthContextProps {
     React.SetStateAction<
       | {
           email: string | null | undefined;
+          uid: string | null;
+          displayName: string | null;
         }
       | undefined
       | null
@@ -11,6 +13,8 @@ interface AuthContextProps {
   session:
     | {
         email: string | null | undefined;
+        uid: string | null;
+        displayName: string | null;
       }
     | undefined
     | null;

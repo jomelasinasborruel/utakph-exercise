@@ -1,4 +1,4 @@
-import { AuthContext } from "@/contexts/AuthContaxt";
+import { AuthContext } from "@/contexts/SessionProvider/AuthContext";
 import { useContext } from "react";
 
 function useAuthContext(): AuthContextProps {

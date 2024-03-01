@@ -11,20 +11,17 @@ import { ref, set } from "firebase/database";
 import * as React from "react";
 import { headCells } from "../MenuTable/headCells";
 
-export default function AddItemModal({ viewBin }: { viewBin: boolean }) {
+export default function AddItemModal({
+  viewBin,
+  currentMenuID,
+}: {
+  viewBin: boolean;
+  currentMenuID: string | null;
+}) {
   const [open, setOpen] = React.useState(false);
   const [options, setOptions] = React.useState<string[]>([]);
-  const handleClickOpen = () => {
-    if (viewBin) return;
-    setOpen(true);
-  };
-
-  const handleClose = () => {
-    setOptions([]);
-    setOpen(false);
-  };
-
   const items = headCells.map((item) => ({ label: item.label, key: item.id }));
+
   const handleAddOption = () => {
     const optionsInput = document.getElementById("options") as HTMLInputElement;
     if (
@@ -38,13 +35,24 @@ export default function AddItemModal({ viewBin }: { viewBin: boolean }) {
     optionsInput.focus();
   };
 
+  const handleClickOpen = () => {
+    if (viewBin) return;
+    setOpen(true);
+  };
+
+  const handleClose = () => {
+    setOptions([]);
+    setOpen(false);
+  };
+
   const setNewRecord = (data: Data) => {
     const datum = JSON.parse(JSON.stringify(data));
     delete datum.id;
 
     try {
-      set(ref(DB, "menu/" + data.id), {
+      set(ref(DB, "items/" + data.id), {
         ...datum,
+        menuID: currentMenuID,
         deletedAt: 0,
       });
     } catch (error) {
