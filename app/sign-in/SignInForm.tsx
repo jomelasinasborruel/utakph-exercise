@@ -32,7 +32,7 @@ export default function SignInForm() {
     >
       {(errors.email || errors.email) && (
         <Grow in={!!errors}>
-          <Alert variant="standard" color="error" sx={{ py: 0 }}>
+          <Alert variant="standard" color="error" sx={{ py: 0 }} severity="error">
             Invalid email or password
           </Alert>
         </Grow>

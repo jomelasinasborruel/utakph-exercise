@@ -74,7 +74,12 @@ export default function SignUpForm() {
         />
         {errors.email && (
           <Grow in={!!errors.email}>
-            <Alert variant="standard" color="error" sx={{ py: 0 }}>
+            <Alert
+              variant="standard"
+              color="error"
+              sx={{ py: 0 }}
+              severity="error"
+            >
               {errors.email?.message}{" "}
             </Alert>
           </Grow>
@@ -93,7 +98,12 @@ export default function SignUpForm() {
         />
         {errors.password && (
           <Grow in={!!errors.password}>
-            <Alert variant="standard" color="error" sx={{ py: 0 }}>
+            <Alert
+              variant="standard"
+              color="error"
+              sx={{ py: 0 }}
+              severity="error"
+            >
               {errors.password?.message}{" "}
             </Alert>
           </Grow>
@@ -112,7 +122,12 @@ export default function SignUpForm() {
         />
         {errors.confirmPassword && (
           <Grow in={!!errors.confirmPassword}>
-            <Alert variant="standard" color="error" sx={{ py: 0 }}>
+            <Alert
+              variant="standard"
+              color="error"
+              sx={{ py: 0 }}
+              severity="error"
+            >
               {errors.confirmPassword?.message}{" "}
             </Alert>
           </Grow>
