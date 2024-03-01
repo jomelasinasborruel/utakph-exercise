@@ -20,5 +20,5 @@ interface AuthContextProps {
     | null;
   login: (email: string, password: string) => void;
   logout: () => void;
-  createAccount: (email: string, password: string) => void;
+  createAccount: (email: string, password: string) => Promise<void>;
 }

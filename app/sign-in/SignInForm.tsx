@@ -1,6 +1,6 @@
 "use client";
 import { AuthContext } from "@/contexts/SessionProvider/AuthContext";
-import { Button, FormControl, TextField } from "@mui/material";
+import { Alert, Button, FormControl, Grow, TextField } from "@mui/material";
 import { useRouter } from "next/navigation";
 import { useContext } from "react";
 import { useForm } from "react-hook-form";
@@ -30,6 +30,13 @@ export default function SignInForm() {
       top-1/2 left-1/2 -translate-y-1/2 -translate-x-1/2 max-w-[500px] w-[90vw] grid gap-4"
       onSubmit={handleSubmit(onSubmit)}
     >
+      {(errors.email || errors.email) && (
+        <Grow in={!!errors}>
+          <Alert variant="standard" color="error" sx={{ py: 0 }}>
+            Invalid email or password
+          </Alert>
+        </Grow>
+      )}
       <FormControl>
         <TextField
           inputProps={{
@@ -41,9 +48,6 @@ export default function SignInForm() {
           variant="outlined"
           label="Email"
         />
-        {errors.email && (
-          <span className="text-red-700">{errors.email.message}</span>
-        )}
       </FormControl>
       <FormControl>
         <TextField
@@ -57,15 +61,12 @@ export default function SignInForm() {
           variant="outlined"
           label="Password"
         />
-        {errors.password && (
-          <span className="text-red-700">{errors.password.message}</span>
-        )}
       </FormControl>
       <div className="grid grid-flow-col gap-4">
         <Button type="submit" variant="contained">
-          SUBMIT
+          SIGN IN
         </Button>
-        <Button variant="outlined" onClick={() => router.push("/sign-up")}>
+        <Button variant="outlined" onClick={() => router.replace("/sign-up")}>
           SIGN UP
         </Button>
       </div>

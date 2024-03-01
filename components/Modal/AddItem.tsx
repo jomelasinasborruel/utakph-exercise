@@ -10,6 +10,9 @@ import dayjs from "dayjs";
 import { ref, set } from "firebase/database";
 import * as React from "react";
 import { headCells } from "../MenuTable/headCells";
+import { Snackbar } from "@mui/material";
+import { BiCheckCircle } from "react-icons/bi";
+import { BsCheck2Circle } from "react-icons/bs";
 
 export default function AddItemModal({
   viewBin,
@@ -21,6 +24,7 @@ export default function AddItemModal({
   const [open, setOpen] = React.useState(false);
   const [options, setOptions] = React.useState<string[]>([]);
   const items = headCells.map((item) => ({ label: item.label, key: item.id }));
+  const [isSnackbarToggled, setIsSnackbarToggled] = React.useState(false);
 
   const handleAddOption = () => {
     const optionsInput = document.getElementById("options") as HTMLInputElement;
@@ -49,16 +53,28 @@ export default function AddItemModal({
     const datum = JSON.parse(JSON.stringify(data));
     delete datum.id;
 
-    try {
-      set(ref(DB, "items/" + data.id), {
-        ...datum,
-        menuID: currentMenuID,
-        deletedAt: 0,
-      });
-    } catch (error) {
-      console.log(error);
-    }
+    set(ref(DB, "items/" + data.id), {
+      ...datum,
+      menuID: currentMenuID,
+      deletedAt: 0,
+    })
+      .then(() => {
+        setIsSnackbarToggled(true);
+      })
+      .catch((error) => console.log(error));
+
     handleClose();
+  };
+
+  const handleCloseSnackBar = (
+    _event: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") {
+      return;
+    }
+
+    setIsSnackbarToggled(false);
   };
 
   const handleDeleteOption = (val: string) =>
@@ -66,6 +82,18 @@ export default function AddItemModal({
 
   return (
     <React.Fragment>
+      <Snackbar
+        ContentProps={{ sx: { bgcolor: "#198754" } }}
+        color="error"
+        open={isSnackbarToggled}
+        autoHideDuration={3000}
+        message={
+          <span>
+            <BiCheckCircle className="inline text-[1.5rem] mr-2" /> Item added
+          </span>
+        }
+        onClose={handleCloseSnackBar}
+      />
       <Button
         variant="outlined"
         sx={{ mr: 2, cursor: viewBin ? "not-allowed" : "pointer" }}
@@ -164,6 +192,11 @@ export default function AddItemModal({
                 id={item.key}
                 name={item.key}
                 label={item.label}
+                onKeyDown={(e) => {
+                  if (e.code === "Enter") {
+                    e.preventDefault();
+                  }
+                }}
                 type={["price", "cost"].includes(item.key) ? "number" : "text"}
                 sx={{
                   "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button":

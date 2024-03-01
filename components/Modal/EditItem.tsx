@@ -10,6 +10,8 @@ import dayjs from "dayjs";
 import { ref, set, update } from "firebase/database";
 import * as React from "react";
 import { headCells } from "../MenuTable/headCells";
+import { Snackbar } from "@mui/material";
+import { BiCheckCircle } from "react-icons/bi";
 
 export default function EditItemModal({
   item: menuItem,
@@ -21,11 +23,22 @@ export default function EditItemModal({
   setTooggleModal: React.Dispatch<React.SetStateAction<boolean>>;
 }) {
   const [options, setOptions] = React.useState<string[]>([]);
+  const [isSnackbarToggled, setIsSnackbarToggled] = React.useState(false);
   const handleClose = () => {
     setOptions([]);
     setTooggleModal(false);
   };
 
+  const handleCloseSnackBar = (
+    _event: React.SyntheticEvent | Event,
+    reason?: string
+  ) => {
+    if (reason === "clickaway") {
+      return;
+    }
+
+    setIsSnackbarToggled(false);
+  };
   const items = headCells.map((item) => ({ label: item.label, key: item.id }));
   const handleAddOption = () => {
     const optionsInput = document.getElementById("options") as HTMLInputElement;
@@ -45,11 +58,14 @@ export default function EditItemModal({
     delete datum.id;
 
     try {
-      update(ref(DB, "menu/" + data.id), {
+      update(ref(DB, "items/" + menuItem.id), {
         ...datum,
+        menuID: (menuItem as any).menuID,
         dateCreated: menuItem.dateCreated,
         deletedAt: 0,
-      });
+      })
+        .then(() => setIsSnackbarToggled(true))
+        .catch((err) => console.log(err));
     } catch (error) {
       console.log(error);
     }
@@ -69,6 +85,18 @@ export default function EditItemModal({
 
   return (
     <React.Fragment>
+      <Snackbar
+        ContentProps={{ sx: { bgcolor: "#198754" } }}
+        color="error"
+        open={isSnackbarToggled}
+        autoHideDuration={3000}
+        message={
+          <span>
+            <BiCheckCircle className="inline text-[1.5rem] mr-2" /> Item updated
+          </span>
+        }
+        onClose={handleCloseSnackBar}
+      />
       <Dialog
         open={toggleModal}
         onClose={handleClose}
@@ -161,6 +189,11 @@ export default function EditItemModal({
                 id={item.key}
                 name={item.key}
                 label={item.label}
+                onKeyDown={(e) => {
+                  if (e.code === "Enter") {
+                    e.preventDefault();
+                  }
+                }}
                 type={["price", "cost"].includes(item.key) ? "number" : "text"}
                 sx={{
                   "& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button":
