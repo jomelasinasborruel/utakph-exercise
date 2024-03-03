@@ -134,7 +134,11 @@ export default function SignUpForm() {
         )}
       </FormControl>
       <div className="grid grid-flow-row gap-4">
-        <Button type="submit" variant="contained">
+        <Button
+          type="submit"
+          variant="contained"
+          style={{ background: "#092a50" }}
+        >
           SIGN UP
         </Button>
         <Button onClick={() => router.replace("/sign-in")} variant="outlined">

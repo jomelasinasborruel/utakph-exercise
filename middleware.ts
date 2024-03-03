@@ -1,13 +1,25 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { getToken } from "next-auth/jwt";
 
-// This function can be marked `async` if using `await` inside
-export function middleware(request: NextRequest) {
-    // sessionStorage.getItem('asdasd')
-//   return NextResponse.redirect(new URL("/home", request.url));
+const secret = process.env.NEXTAUTH_SECRET;
+
+export default async function middleware(request: NextRequest) {
+  const jwt = await getToken({ req: request });
+
+  if (request.nextUrl.pathname === "/" && !jwt) {
+    return NextResponse.redirect(new URL("/api/auth/signin", request.url));
+  }
+
+  if (
+    jwt &&
+    (request.nextUrl.pathname == "/sign-in" ||
+      request.nextUrl.pathname == "/sign-up")
+  ) {
+    return NextResponse.redirect(new URL("/", request.url));
+  }
 }
 
-// See "Matching Paths" below to learn more
 export const config = {
-  matcher: "/:path*",
+  matcher: ["/((?!api|_next/static|_next/image|favicon.ico).*)"],
 };

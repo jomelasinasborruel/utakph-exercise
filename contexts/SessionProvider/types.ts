@@ -18,7 +18,7 @@ interface AuthContextProps {
       }
     | undefined
     | null;
-  login: (email: string, password: string) => void;
+  login: (email: string, password: string) => Promise<void>;
   logout: () => void;
   createAccount: (email: string, password: string) => Promise<void>;
 }

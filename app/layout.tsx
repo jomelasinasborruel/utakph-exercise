@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
+import { SessionProvider as NextAuthProvider } from "next-auth/react";
 import SessionProvider from "../contexts/SessionProvider";
 
 const inter = Inter({ subsets: ["latin"] });
@@ -21,9 +22,9 @@ export default function RootLayout({
         <div className="z-[1] absolute h-6 top-0 left-0 w-full text-center bg-green-900 text-white">
           UTAK-PH Test
         </div>
-        <SessionProvider>
-          {children}
-          </SessionProvider>
+        {/* <NextAuthProvider> */}
+        <SessionProvider>{children}</SessionProvider>
+        {/* </NextAuthProvider> */}
       </body>
     </html>
   );
